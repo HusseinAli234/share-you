@@ -1,0 +1,49 @@
+# FastAPI
+fastapi
+uvicorn[standard]
+
+# HTTP client
+httpx
+
+# PostgreSQL
+psycopg2-binary
+
+# ORM
+sqlalchemy
+alembic
+
+#  SQLAlchemy
+# sqlmodel
+
+# Validation
+pydantic
+pydantic-settings
+
+# AWS S3
+boto3
+
+# file-upload
+python-multipart
+
+# env
+python-dotenv
+
+# JWT 
+python-jose[cryptography]
+passlib[bcrypt]
+
+# Async DB
+asyncpg
+
+# Logger
+loguru
+
+# Testing
+pytest
+pytest-asyncio
+
+# Linter
+black
+isort
+flake8
+mypy
