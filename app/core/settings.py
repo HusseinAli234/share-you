@@ -1,7 +1,16 @@
 from pydantic_settings import BaseSettings,SettingsConfigDict
-
+from pydantic import computed_field
 class Settings(BaseSettings):
-    DATABASE_URL: str
+    POSTGRES_USER: str 
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
+    POSTGRES_HOST: str = "db"
+    POSTGRES_PORT: int = 5432
+    @computed_field
+    @property
+    def DATABASE_URL(self)-> str:
+        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
     model_config = SettingsConfigDict(env_file='.env')
 
 settings = Settings()
