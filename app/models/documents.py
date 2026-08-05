@@ -1,14 +1,12 @@
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import func
-from sqlalchemy import ForeignKey
-
 from datetime import datetime
-from sqlalchemy.orm import relationship
-from app.db.base import Base
-from app.db.base import TimestampMixin
+
+from sqlalchemy import ForeignKey, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base, TimestampMixin
 
 
-class Document(TimestampMixin,Base):
+class Document(TimestampMixin, Base):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)

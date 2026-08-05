@@ -1,9 +1,10 @@
-from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import func
 from datetime import datetime
-from sqlalchemy.orm import relationship
-from app.db.base import Base
-from app.db.base import TimestampMixin
+
+from sqlalchemy import func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base, TimestampMixin
+
 
 class User(TimestampMixin, Base):
     __tablename__ = "users"

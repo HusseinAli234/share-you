@@ -7,8 +7,6 @@ def hashed_password(raw_password: str):
     hashed = secure_context.hash(raw_password)
     return hashed
 
-def verify(raw_password:str, hashed_password: str) -> bool:
-    return secure_context.verify(raw_password,hashed_password)
 
-
-    
+def verify(raw_password: str, hashed_password: str) -> bool:
+    return secure_context.verify(raw_password, hashed_password)
