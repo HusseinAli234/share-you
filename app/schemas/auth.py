@@ -1,6 +1,6 @@
 from typing import Self
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class RegisterForm(BaseModel):
@@ -18,3 +18,14 @@ class RegisterForm(BaseModel):
 class RegisterOut(BaseModel):
     message: str
     id: int
+
+
+class LoginOut(BaseModel):
+    token: str
+    message: str
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    login: str
