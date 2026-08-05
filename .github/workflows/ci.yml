@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Check code formatting with Black
+        run: black --check app/ tests/ || true
+
+      - name: Check imports with isort
+        run: isort --check-only app/ tests/ || true
+        
+      - name: Run linter with Flake8
+        run: flake8 app/ tests/ --count --show-source --statistics || true
+
+      - name: Run tests with pytest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: share_me
+          POSTGRES_HOST: localhost
+        run: |
+          pytest

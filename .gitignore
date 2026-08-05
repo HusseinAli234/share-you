@@ -1,1 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
 venv/
+.venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Alembic
+alembic/__pycache__/
+
+# Logs
+*.log
+
+# Tests / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.sqlite3
+*.db
+
+# Migrations cache
+alembic/versions/__pycache__/
