@@ -20,7 +20,7 @@ class ProjectMember(TimestampMixin, Base):
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), primary_key=True)
     project: Mapped["Project"] = relationship(back_populates="project_members")
     user: Mapped["User"] = relationship(back_populates="project_members")
-    role: Mapped["Role"] = mapped_column(SQLEnum(Role))
+    role: Mapped[Role] = mapped_column(SQLEnum(Role))
 
 
 class Project(TimestampMixin, Base):

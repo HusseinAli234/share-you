@@ -29,8 +29,8 @@ python-multipart
 python-dotenv
 
 # JWT 
-python-jose[cryptography]
-passlib[bcrypt]
+PyJWT[crypto]>=2.13.0
+argon2-cffi>=23.1.0
 
 # Async DB
 asyncpg
