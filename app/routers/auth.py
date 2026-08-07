@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.core.security import (create_access_token, get_current_user,
                                hashed_password, verify)
 from app.db.session import get_db
-from app.models.users import User
+from app.models import User
 from app.schemas.auth import LoginOut, RegisterForm, RegisterOut, UserOut
 
 router = APIRouter(prefix="/auth")
@@ -43,7 +43,7 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
     user = db.query(User).filter(User.login == form.username).first()
     if user and verify(form.password, user.hashed_password):
         token = create_access_token(user)
-        return {"token": token, "message": "Successfully sign in"}
+        return {"access_token": token, "message": "Successfully sign in"}
     else:
         raise HTTPException(status_code=403, detail="Invalid sign in")
 

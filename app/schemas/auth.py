@@ -21,7 +21,8 @@ class RegisterOut(BaseModel):
 
 
 class LoginOut(BaseModel):
-    token: str
+    access_token: str
+    token_type: str = "bearer"
     message: str
 
 

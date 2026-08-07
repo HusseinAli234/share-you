@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     POSTGRES_HOST: str = "db"
     POSTGRES_PORT: int = 5432
+    SECRET_KEY: str
+
+    EXPIRE_TIME: int = 5
 
     @computed_field
     @property
