@@ -1,18 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException, status,UploadFile
-from sqlalchemy.orm import Session
 from typing import List
 
-from app.db.session import get_db
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from sqlalchemy.orm import Session
+
 from app.core.security import get_current_user
-from app.models import Project, User,ProjectMember,Role,Document
-from app.schemas.projects import ProjectCreate, ProjectOut, ProjectUpdate,ProjectInvite
+from app.db.session import get_db
+from app.models import Document, Project, ProjectMember, Role, User
 from app.schemas.documents import DocumentOut
-from app.utils.s3 import upload_file as s3_upload_file,get_url
-from app.utils.validators import validate_file, validate_projects_member,validate_project_owner
+from app.schemas.projects import (ProjectCreate, ProjectInvite, ProjectOut,
+                                  ProjectUpdate)
+from app.utils.s3 import get_url
+from app.utils.s3 import upload_file as s3_upload_file
+from app.utils.validators import (validate_file, validate_project_owner,
+                                  validate_projects_member)
 
+router = APIRouter(prefix="/projects", tags=["Projects"])
 
-
-router = APIRouter(prefix="/projects",tags=["Projects"])
 
 @router.post(
     "/",
@@ -24,20 +27,16 @@ router = APIRouter(prefix="/projects",tags=["Projects"])
 def create_project(
     project: ProjectCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: User = Depends(get_current_user),
 ):
     project_db = Project(
-        name=project.name,
-        description=project.description,
-        owner_id=user.id
+        name=project.name, description=project.description, owner_id=user.id
     )
     db.add(project_db)
     db.flush()
 
     project_member = ProjectMember(
-        user_id=user.id,
-        project_id=project_db.id,
-        role=Role.OWNER
+        user_id=user.id, project_id=project_db.id, role=Role.OWNER
     )
     db.add(project_member)
     db.commit()
@@ -52,8 +51,7 @@ def create_project(
     response_description="Projects by user",
 )
 def get_user_projects(
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
     projects = (
         db.query(Project)
@@ -74,7 +72,7 @@ def get_user_projects(
 def get_project_by_id(
     project_id: int,
     user: User = Depends(validate_projects_member),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -93,7 +91,7 @@ def update_project(
     data: ProjectUpdate,
     project_id: int,
     user: User = Depends(validate_project_owner),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -121,13 +119,13 @@ def send_invite(
     project_inv: ProjectInvite,
     project_id: int,
     user: User = Depends(validate_project_owner),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     member = (
         db.query(ProjectMember)
         .filter(
             ProjectMember.project_id == project_id,
-            ProjectMember.user_id == project_inv.user_id
+            ProjectMember.user_id == project_inv.user_id,
         )
         .first()
     )
@@ -141,9 +139,7 @@ def send_invite(
         raise HTTPException(status_code=400, detail="Bad request!")
 
     project_memb = ProjectMember(
-        role=project_inv.role,
-        project_id=project_id,
-        user_id=project_inv.user_id
+        role=project_inv.role, project_id=project_id, user_id=project_inv.user_id
     )
     db.add(project_memb)
     db.commit()
@@ -159,7 +155,7 @@ def send_invite(
 def delete_project(
     project_id: int,
     user: User = Depends(validate_project_owner),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
 
@@ -182,20 +178,16 @@ def upload_file(
     project_id: int,
     file: UploadFile = Depends(validate_file),
     db: Session = Depends(get_db),
-    user: User = Depends(validate_projects_member)
+    user: User = Depends(validate_projects_member),
 ):
-    s3_key = s3_upload_file(
-        file.file,
-        file.filename,
-        f"projects/{project_id}"
-    )
+    s3_key = s3_upload_file(file.file, file.filename, f"projects/{project_id}")
 
     doc = Document(
         name=file.filename,
         doc_type=file.content_type,
         size=file.size,
         project_id=project_id,
-        s3_key=s3_key
+        s3_key=s3_key,
     )
     db.add(doc)
     db.commit()
@@ -208,20 +200,17 @@ def upload_file(
     response_model=DocumentOut,
     status_code=status.HTTP_200_OK,
     summary="This endpoint for getting document",
-    response_description="The document"
+    response_description="The document",
 )
 def get_document(
     project_id: int,
     document_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(validate_projects_member)
+    user: User = Depends(validate_projects_member),
 ):
     doc = (
         db.query(Document)
-        .filter(
-            Document.id == document_id,
-            Document.project_id == project_id
-        )
+        .filter(Document.id == document_id, Document.project_id == project_id)
         .first()
     )
 
@@ -238,12 +227,12 @@ def get_document(
     response_model=List[DocumentOut],
     status_code=status.HTTP_200_OK,
     summary="This endpoint for getting documents",
-    response_description="The documents"
+    response_description="The documents",
 )
 def get_documents(
     project_id: int,
     user: User = Depends(validate_projects_member),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     docs = db.query(Document).filter(Document.project_id == project_id).all()
 
@@ -254,24 +243,3 @@ def get_documents(
         doc.download_url = get_url(doc.s3_key)
 
     return docs
-
-
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-

@@ -11,4 +11,6 @@ class User(TimestampMixin, Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     login: Mapped[str] = mapped_column(unique=True)
     hashed_password: Mapped[str] = mapped_column()
-    project_members: Mapped[list["ProjectMember"]] = relationship(back_populates="user",cascade="all, delete-orphan",passive_deletes=True)
+    project_members: Mapped[list["ProjectMember"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan", passive_deletes=True
+    )
