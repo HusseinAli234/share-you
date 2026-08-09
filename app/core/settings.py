@@ -12,6 +12,11 @@ class Settings(BaseSettings):
 
     EXPIRE_TIME: int = 5
 
+    AWS_ACCESS_KEY_ID: str
+    AWS_SECRET_ACCESS_KEY: str
+    AWS_REGION_NAME: str
+    S3_BUCKET_NAME: str
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:

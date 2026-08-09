@@ -29,6 +29,7 @@ class Project(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str | None] = mapped_column()
     version: Mapped[int] = mapped_column(default=1)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     project_members: Mapped[list["ProjectMember"]] = relationship(
         back_populates="project",cascade="all, delete-orphan",passive_deletes=True
     )
