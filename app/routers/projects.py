@@ -7,12 +7,14 @@ from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models import Document, Project, ProjectMember, Role, User
 from app.schemas.documents import DocumentOut
-from app.schemas.projects import (ProjectCreate, ProjectInvite, ProjectOut,
-                                  ProjectUpdate)
+from app.schemas.projects import ProjectCreate, ProjectInvite, ProjectOut, ProjectUpdate
 from app.utils.s3 import get_url
 from app.utils.s3 import upload_file as s3_upload_file
-from app.utils.validators import (validate_file, validate_project_owner,
-                                  validate_projects_member)
+from app.utils.validators import (
+    validate_file,
+    validate_project_owner,
+    validate_projects_member,
+)
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
