@@ -43,4 +43,4 @@ jobs:
           POSTGRES_DB: share_me
           POSTGRES_HOST: localhost
         run: |
-          pytest
+          python -m pytest
