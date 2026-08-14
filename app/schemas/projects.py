@@ -20,6 +20,7 @@ class ProjectOut(BaseModel):
     id: int
     name: str
     description: Optional[str] = None
+    total_size: Optional[int] = None
     version: int
 
 

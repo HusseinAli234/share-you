@@ -12,16 +12,37 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  
+  minio:
+      image: minio/minio
+      restart: always
+      env_file:
+        - .env
+      ports:
+        - "9000:9000"
+        - "9001:9001"
+      command: server /data --console-address ":9001"
+      volumes:
+        - minio_data:/data
 
   web:
     build: .
+    restart: always
     ports:
       - "8000:8000"
     depends_on:
           db:
             condition: service_healthy
+          minio:
+            condition: service_started
     env_file:
       - .env
     volumes:
       - .:/app
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+volumes:
+  postgres_data:
+  minio_data:

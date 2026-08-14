@@ -1,15 +1,26 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user
 from app.db.session import get_db
-from app.models import Document, Project, ProjectMember, Role, User
+from app.models import User
 from app.schemas.documents import DocumentOut
-from app.schemas.projects import ProjectCreate, ProjectInvite, ProjectOut, ProjectUpdate
-from app.utils.s3 import get_url
-from app.utils.s3 import upload_file as s3_upload_file
+from app.schemas.projects import (
+    ProjectCreate,
+    ProjectInvite,
+    ProjectOut,
+    ProjectUpdate,
+)
+from app.services.project_service import ProjectService
 from app.utils.validators import (
     validate_file,
     validate_project_owner,
@@ -31,18 +42,7 @@ def create_project(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    project_db = Project(
-        name=project.name, description=project.description, owner_id=user.id
-    )
-    db.add(project_db)
-    db.flush()
-
-    project_member = ProjectMember(
-        user_id=user.id, project_id=project_db.id, role=Role.OWNER
-    )
-    db.add(project_member)
-    db.commit()
-    return project_db
+    return ProjectService.create_project(db=db, project_data=project, user_id=user.id)
 
 
 @router.get(
@@ -55,13 +55,7 @@ def create_project(
 def get_user_projects(
     user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    projects = (
-        db.query(Project)
-        .join(ProjectMember, ProjectMember.project_id == Project.id)
-        .filter(ProjectMember.user_id == user.id)
-        .all()
-    )
-    return projects
+    return ProjectService.get_user_projects(db=db, user_id=user.id)
 
 
 @router.get(
@@ -76,7 +70,7 @@ def get_project_by_id(
     user: User = Depends(validate_projects_member),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = ProjectService.get_project_by_id(db=db, project_id=project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Not found")
     return project
@@ -90,63 +84,15 @@ def get_project_by_id(
     response_description="Updated project by user",
 )
 def update_project(
-    data: ProjectUpdate,
     project_id: int,
+    data: ProjectUpdate,
     user: User = Depends(validate_project_owner),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = ProjectService.update_project(db=db, project_id=project_id, data=data)
     if not project:
         raise HTTPException(status_code=404, detail="Not found")
-
-    data = data.model_dump(exclude_unset=True)
-
-    for field, value in data.items():
-        setattr(project, field, value)
-
-    project.version += 1
-    db.commit()
-    db.refresh(project)
     return project
-
-
-@router.post(
-    "/{project_id}/invite",
-    response_model=str,
-    status_code=status.HTTP_200_OK,
-    summary="This endpoint for invite user to project",
-    response_description="Successfully sent invite",
-)
-def send_invite(
-    project_inv: ProjectInvite,
-    project_id: int,
-    user: User = Depends(validate_project_owner),
-    db: Session = Depends(get_db),
-):
-    member = (
-        db.query(ProjectMember)
-        .filter(
-            ProjectMember.project_id == project_id,
-            ProjectMember.user_id == project_inv.user_id,
-        )
-        .first()
-    )
-
-    us = db.query(User).filter(User.id == project_inv.user_id).first()
-
-    if not us:
-        raise HTTPException(status_code=404, detail="Not found")
-
-    if member:
-        raise HTTPException(status_code=400, detail="Bad request!")
-
-    project_memb = ProjectMember(
-        role=project_inv.role, project_id=project_id, user_id=project_inv.user_id
-    )
-    db.add(project_memb)
-    db.commit()
-
-    return "Successfully invited"
 
 
 @router.delete(
@@ -156,17 +102,42 @@ def send_invite(
 )
 def delete_project(
     project_id: int,
+    background_tasks: BackgroundTasks,
     user: User = Depends(validate_project_owner),
     db: Session = Depends(get_db),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
-
-    if not project:
+    is_deleted = ProjectService.delete_project(
+        db=db, project_id=project_id, background_tasks=background_tasks
+    )
+    if not is_deleted:
         raise HTTPException(status_code=404, detail="Not found")
-
-    db.delete(project)
-    db.commit()
     return
+
+
+@router.post(
+    "/{project_id}/invite/",
+    response_model=str,
+    status_code=status.HTTP_200_OK,
+    summary="This endpoint for invite user to project",
+    response_description="Successfully sent invite",
+)
+def send_invite(
+    project_id: int,
+    project_inv: ProjectInvite,
+    user: User = Depends(validate_project_owner),
+    db: Session = Depends(get_db),
+):
+    success, message = ProjectService.invite_user(
+        db=db, project_id=project_id, invite_data=project_inv
+    )
+
+    if not success:
+        if message == "User not found":
+            raise HTTPException(status_code=404, detail="Not found")
+        elif message == "User is already a member":
+            raise HTTPException(status_code=400, detail="Bad request!")
+
+    return message
 
 
 @router.post(
@@ -182,19 +153,10 @@ def upload_file(
     db: Session = Depends(get_db),
     user: User = Depends(validate_projects_member),
 ):
-    s3_key = s3_upload_file(file.file, file.filename, f"projects/{project_id}")
-
-    doc = Document(
-        name=file.filename,
-        doc_type=file.content_type,
-        size=file.size,
-        project_id=project_id,
-        s3_key=s3_key,
-    )
-    db.add(doc)
-    db.commit()
-    db.refresh(doc)
-    return doc
+    try:
+        return ProjectService.upload_document(db=db, project_id=project_id, file=file)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Limited size of project")
 
 
 @router.get(
@@ -210,17 +172,11 @@ def get_document(
     db: Session = Depends(get_db),
     user: User = Depends(validate_projects_member),
 ):
-    doc = (
-        db.query(Document)
-        .filter(Document.id == document_id, Document.project_id == project_id)
-        .first()
+    doc = ProjectService.get_document(
+        db=db, project_id=project_id, document_id=document_id
     )
-
     if not doc:
         raise HTTPException(status_code=404, detail="Not Found!")
-
-    url = get_url(doc.s3_key)
-    doc.download_url = url
     return doc
 
 
@@ -236,12 +192,54 @@ def get_documents(
     user: User = Depends(validate_projects_member),
     db: Session = Depends(get_db),
 ):
-    docs = db.query(Document).filter(Document.project_id == project_id).all()
+    return ProjectService.get_documents(db=db, project_id=project_id)
 
-    if len(docs) == 0:
-        return docs
 
-    for doc in docs:
-        doc.download_url = get_url(doc.s3_key)
+@router.put(
+    "/{project_id}/documents/{document_id}",
+    response_model=DocumentOut,
+    status_code=status.HTTP_200_OK,
+    summary="This endpoint for updating document by id",
+    response_description="Updated document by user",
+)
+def update_document(
+    project_id: int,
+    document_id: int,
+    background_tasks: BackgroundTasks,
+    user: User = Depends(validate_project_owner),
+    db: Session = Depends(get_db),
+    file: UploadFile = Depends(validate_file),
+):
+    try:
+        document = ProjectService.update_document(
+            db=db,
+            document_id=document_id,
+            project_id=project_id,
+            file=file,
+            background_tasks=background_tasks,
+        )
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Limited size of project")
+    if not document:
+        raise HTTPException(status_code=404, detail="Not found")
+    return document
 
-    return docs
+
+@router.delete(
+    "/{project_id}/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="",
+)
+def delete_document(
+    document_id: int,
+    project_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user: User = Depends(validate_project_owner),
+):
+    is_deleted = ProjectService.delete_document(
+        db, document_id, project_id, background_tasks
+    )
+    if not is_deleted:
+        raise HTTPException(status_code=404, detail="Not found")
+    return

@@ -1,9 +1,20 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, status
 
+from app.core.settings import settings
 from app.routers.auth import router as auth
 from app.routers.projects import router as project
+from app.utils.s3 import init_bucket
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_bucket()
+    yield {}
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 app.include_router(auth)
