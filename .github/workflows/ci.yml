@@ -42,5 +42,13 @@ jobs:
           POSTGRES_PASSWORD: admin
           POSTGRES_DB: share_me
           POSTGRES_HOST: localhost
+          SECRET_KEY: dummy_secret
+          AWS_ACCESS_KEY_ID: dummy
+          AWS_SECRET_ACCESS_KEY: dummy
+          AWS_REGION_NAME: us-east-1
+          S3_BUCKET_NAME: dummy_bucket
+          S3_EXTERNAL_URL: http://localhost:9000
+          MINIO_ROOT_USER: minioadmin
+          MINIO_ROOT_PASSWORD: minioadmin
         run: |
           python -m pytest
