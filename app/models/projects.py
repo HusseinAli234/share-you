@@ -1,9 +1,13 @@
-from datetime import datetime
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import ForeignKey, func
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.users import User
+    from app.models.documents import Document
 
 from app.db.base import Base, TimestampMixin
 
@@ -15,9 +19,13 @@ class Role(str, Enum):
 
 class ProjectMember(TimestampMixin, Base):
     __tablename__ = "project_members"
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id",ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
 
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
+    )
     project: Mapped["Project"] = relationship(back_populates="project_members")
     user: Mapped["User"] = relationship(back_populates="project_members")
     role: Mapped[Role] = mapped_column(SQLEnum(Role))
@@ -29,8 +37,11 @@ class Project(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(nullable=False)
     description: Mapped[str | None] = mapped_column()
     version: Mapped[int] = mapped_column(default=1)
+    total_size: Mapped[int] = mapped_column(nullable=True, default=0)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     project_members: Mapped[list["ProjectMember"]] = relationship(
-        back_populates="project",cascade="all, delete-orphan",passive_deletes=True
+        back_populates="project", cascade="all, delete-orphan", passive_deletes=True
     )
-    documents: Mapped[list["Document"]] = relationship(back_populates="project",cascade="all, delete-orphan",passive_deletes=True)
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan", passive_deletes=True
+    )
