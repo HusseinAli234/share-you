@@ -1,7 +1,9 @@
-from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.projects import ProjectMember
 
 from app.db.base import Base, TimestampMixin
 

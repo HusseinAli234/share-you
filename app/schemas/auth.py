@@ -1,5 +1,3 @@
-from typing import Self
-
 from pydantic import BaseModel, ConfigDict, model_validator
 
 

@@ -1,6 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi import UploadFile
 
 from app.models import Document, Project, ProjectMember, Role, User
@@ -26,9 +25,8 @@ def test_get_user_projects(mock_db_session):
     user_id = 1
     expected_projects = [Project(name="Test Project")]
 
-    mock_db_session.query.return_value.join.return_value.filter.return_value.all.return_value = (
-        expected_projects
-    )
+    mock_filter = mock_db_session.query.return_value.join.return_value.filter
+    mock_filter.return_value.all.return_value = expected_projects
 
     projects = ProjectService.get_user_projects(mock_db_session, user_id)
     assert projects == expected_projects

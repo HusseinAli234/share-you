@@ -1,7 +1,10 @@
-from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, func
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from app.models.projects import Project
 
 from app.db.base import Base, TimestampMixin
 

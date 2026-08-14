@@ -1,8 +1,7 @@
 from io import BytesIO
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import botocore.exceptions
-import pytest
 
 from app.core.settings import settings
 from app.utils.s3 import delete_file, get_url, init_bucket, upload_file
