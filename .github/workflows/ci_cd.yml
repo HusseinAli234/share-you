@@ -45,6 +45,7 @@ jobs:
           SECRET_KEY: dummy_secret
           AWS_ACCESS_KEY_ID: dummy
           AWS_SECRET_ACCESS_KEY: dummy
+          AWS_SESSION_TOKEN: dummy
           AWS_REGION_NAME: us-east-1
           S3_BUCKET_NAME: dummy_bucket
           S3_EXTERNAL_URL: http://localhost:9000
