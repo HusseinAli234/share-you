@@ -4,10 +4,11 @@ from typing import List, Optional, Tuple
 from fastapi import BackgroundTasks, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.logger import logger
 from app.core.settings import settings
 from app.models import Document, Project, ProjectMember, Role, User
-from app.schemas.projects import ProjectCreate, ProjectInvite, ProjectUpdate
-from app.utils.s3 import delete_file, get_url
+from app.schemas.projects import ProjectCreate, ProjectUpdate
+from app.utils.s3 import delete_file
 from app.utils.s3 import upload_file as s3_upload_file
 
 
@@ -29,6 +30,7 @@ class ProjectService:
         )
         db.add(project_member)
         db.commit()
+        logger.info(f"Project created with ID {project_db.id} by user {user_id}")
         return project_db
 
     @staticmethod
@@ -50,6 +52,7 @@ class ProjectService:
     ) -> Optional[Project]:
         project = db.query(Project).filter(Project.id == project_id).first()
         if not project:
+            logger.warning(f"Failed to update project {project_id}: not found")
             return None
 
         update_data = data.model_dump(exclude_unset=True)
@@ -59,6 +62,7 @@ class ProjectService:
         project.version += 1
         db.commit()
         db.refresh(project)
+        logger.info(f"Project {project_id} updated to version {project.version}")
         return project
 
     @staticmethod
@@ -67,6 +71,7 @@ class ProjectService:
     ) -> bool:
         project = db.query(Project).filter(Project.id == project_id).first()
         if not project:
+            logger.warning(f"Failed to delete project {project_id}: not found")
             return False
 
         s3_key_docs = [doc.s3_key for doc in project.documents]
@@ -75,34 +80,44 @@ class ProjectService:
 
         db.delete(project)
         db.commit()
+        logger.info(f"Project {project_id} deleted successfully")
         return True
 
     @staticmethod
-    def invite_user(
-        db: Session, project_id: int, invite_data: ProjectInvite
-    ) -> Tuple[bool, str]:
-        user = db.query(User).filter(User.id == invite_data.user_id).first()
+    def invite_user(db: Session, project_id: int, user_login: str) -> Tuple[bool, str]:
+        user = db.query(User).filter(User.login == user_login).first()
         if not user:
+            logger.warning(
+                f"Failed to invite user {user_login} "
+                f"to project {project_id}: user not found"
+            )
             return False, "User not found"
 
         member = (
             db.query(ProjectMember)
             .filter(
                 ProjectMember.project_id == project_id,
-                ProjectMember.user_id == invite_data.user_id,
+                ProjectMember.user_id == user.id,
             )
             .first()
         )
         if member:
+            logger.warning(
+                f"User {user.id} is already " f"a member of project {project_id}"
+            )
             return False, "User is already a member"
 
         project_memb = ProjectMember(
-            role=invite_data.role,
+            role=Role.PARTICIPANT,
             project_id=project_id,
-            user_id=invite_data.user_id,
+            user_id=user.id,
         )
         db.add(project_memb)
         db.commit()
+        logger.info(
+            f"User {user.id} invited to project "
+            f"{project_id} with role {Role.PARTICIPANT}"
+        )
         return True, "Successfully invited"
 
     @staticmethod
@@ -110,6 +125,7 @@ class ProjectService:
         project = db.query(Project).filter(Project.id == project_id).first()
 
         if project.total_size + file.size > settings.MAX_PROJECT_SIZE_BYTES:
+            logger.warning(f"Upload failed: project {project_id} size limit exceeded")
             raise ValueError("Limited size of project")
 
         doc_uuid = uuid.uuid4()
@@ -132,6 +148,7 @@ class ProjectService:
         db.commit()
         db.refresh(doc)
         db.refresh(project)
+        logger.info(f"Document {doc.id} uploaded to project {project_id}")
         return doc
 
     @staticmethod
@@ -145,15 +162,19 @@ class ProjectService:
         )
         if not doc:
             return None
-
-        doc.download_url = get_url(doc.s3_key)
         return doc
 
     @staticmethod
-    def get_documents(db: Session, project_id: int) -> List[Document]:
-        docs = db.query(Document).filter(Document.project_id == project_id).all()
-        for doc in docs:
-            doc.download_url = get_url(doc.s3_key)
+    def get_documents(
+        db: Session, project_id: int, limit: int, skip: int
+    ) -> List[Document]:
+        docs = (
+            db.query(Document)
+            .filter(Document.project_id == project_id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
         return docs
 
     @staticmethod
@@ -178,6 +199,7 @@ class ProjectService:
         if (
             project.total_size - prev_size
         ) + file.size > settings.MAX_PROJECT_SIZE_BYTES:
+            logger.warning(f"Update failed: project {project_id} size limit exceeded")
             raise ValueError("Limited size of project")
 
         background_tasks.add_task(ProjectService.__batch_delete, [document.s3_key])
@@ -197,6 +219,7 @@ class ProjectService:
         db.commit()
         db.refresh(document)
         db.refresh(project)
+        logger.info(f"Document {document_id} in project {project_id} updated")
         return document
 
     @staticmethod
@@ -221,6 +244,7 @@ class ProjectService:
         db.delete(document)
         db.commit()
         db.refresh(project)
+        logger.info(f"Document {document_id} deleted from project {project_id}")
         return True
 
     @staticmethod

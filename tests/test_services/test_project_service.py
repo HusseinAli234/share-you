@@ -2,8 +2,8 @@ from unittest.mock import MagicMock, patch
 
 from fastapi import UploadFile
 
-from app.models import Document, Project, ProjectMember, Role, User
-from app.schemas.projects import ProjectCreate, ProjectInvite, ProjectUpdate
+from app.models import Document, Project, ProjectMember, User
+from app.schemas.projects import ProjectCreate, ProjectUpdate
 from app.services.project_service import ProjectService
 
 
@@ -95,18 +95,15 @@ def test_delete_project_not_found(mock_db_session):
 
 
 def test_invite_user(mock_db_session):
-    user = User(id=2)
-    invite_data = ProjectInvite(user_id=2, role=Role.PARTICIPANT)
-
-    # user exists
+    mock_user = User(id=1, login="test_user")
     mock_db_session.query.return_value.filter.return_value.first.side_effect = [
-        user,
+        mock_user,
         None,
     ]
 
-    success, msg = ProjectService.invite_user(mock_db_session, 1, invite_data)
+    result, msg = ProjectService.invite_user(mock_db_session, 1, "test_user")
 
-    assert success is True
+    assert result is True
     assert msg == "Successfully invited"
     mock_db_session.add.assert_called_once()
     mock_db_session.commit.assert_called_once()
@@ -114,9 +111,7 @@ def test_invite_user(mock_db_session):
 
 def test_invite_user_not_found(mock_db_session):
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
-    success, msg = ProjectService.invite_user(
-        mock_db_session, 1, ProjectInvite(user_id=2, role=Role.PARTICIPANT)
-    )
+    success, msg = ProjectService.invite_user(mock_db_session, 1, "notfound")
     assert success is False
     assert msg == "User not found"
 
@@ -130,9 +125,7 @@ def test_invite_user_already_member(mock_db_session):
         member,
     ]
 
-    success, msg = ProjectService.invite_user(
-        mock_db_session, 1, ProjectInvite(user_id=2, role=Role.PARTICIPANT)
-    )
+    success, msg = ProjectService.invite_user(mock_db_session, 1, "test_user")
 
     assert success is False
     assert msg == "User is already a member"
@@ -162,17 +155,13 @@ def test_upload_document(mock_uuid, mock_s3_upload, mock_db_session):
     mock_db_session.commit.assert_called_once()
 
 
-@patch("app.services.project_service.get_url")
-def test_get_document(mock_get_url, mock_db_session):
-    mock_get_url.return_value = "http://fake-url"
-
+def test_get_document(mock_db_session):
     doc = Document(id=1, s3_key="fake-key")
     mock_db_session.query.return_value.filter.return_value.first.return_value = doc
 
     result = ProjectService.get_document(mock_db_session, 1, 1)
 
     assert result == doc
-    assert result.download_url == "http://fake-url"
 
 
 def test_get_document_not_found(mock_db_session):
@@ -181,17 +170,15 @@ def test_get_document_not_found(mock_db_session):
     assert result is None
 
 
-@patch("app.services.project_service.get_url")
-def test_get_documents(mock_get_url, mock_db_session):
-    mock_get_url.return_value = "http://fake-url"
+def test_get_documents(mock_db_session):
     docs = [Document(id=1, s3_key="fake-key")]
 
-    mock_db_session.query.return_value.filter.return_value.all.return_value = docs
+    mock_query = mock_db_session.query.return_value.filter.return_value
+    mock_query.offset.return_value.limit.return_value.all.return_value = docs
 
-    results = ProjectService.get_documents(mock_db_session, 1)
+    results = ProjectService.get_documents(mock_db_session, 1, limit=10, skip=0)
 
     assert results == docs
-    assert results[0].download_url == "http://fake-url"
 
 
 @patch("app.services.project_service.s3_upload_file")

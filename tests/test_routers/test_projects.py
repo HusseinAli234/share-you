@@ -122,9 +122,7 @@ def test_delete_project_not_found(mock_delete, get_client, override_dependencies
 def test_send_invite(mock_invite, get_client, override_dependencies):
     mock_invite.return_value = (True, "Successfully invited")
 
-    response = get_client.post(
-        "/projects/1/invite/", json={"user_id": 2, "role": "participant"}
-    )
+    response = get_client.post("/projects/1/invite?user=testuser")
 
     assert response.status_code == 200
     assert response.json() == "Successfully invited"
@@ -134,9 +132,7 @@ def test_send_invite(mock_invite, get_client, override_dependencies):
 def test_send_invite_not_found(mock_invite, get_client, override_dependencies):
     mock_invite.return_value = (False, "User not found")
 
-    response = get_client.post(
-        "/projects/1/invite/", json={"user_id": 99, "role": "participant"}
-    )
+    response = get_client.post("/projects/1/invite?user=notfound")
 
     assert response.status_code == 404
 
@@ -145,17 +141,15 @@ def test_send_invite_not_found(mock_invite, get_client, override_dependencies):
 def test_send_invite_already_member(mock_invite, get_client, override_dependencies):
     mock_invite.return_value = (False, "User is already a member")
 
-    response = get_client.post(
-        "/projects/1/invite/", json={"user_id": 2, "role": "participant"}
-    )
+    response = get_client.post("/projects/1/invite?user=testuser")
 
-    assert response.status_code == 400
+    assert response.status_code == 409
 
 
 @patch("app.routers.projects.ProjectService.upload_document")
 def test_upload_file(mock_upload, get_client, override_dependencies):
     mock_upload.return_value = Document(
-        id=1, name="test.txt", size=10, doc_type="text/plain"
+        id=1, name="test.txt", size=10, doc_type="text/plain", s3_key="fake-key"
     )
 
     response = get_client.post(
@@ -174,14 +168,14 @@ def test_upload_file_limit_exceeded(mock_upload, get_client, override_dependenci
         "/projects/1/documents", files={"file": ("test.txt", b"content", "text/plain")}
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 413
     assert response.json()["detail"] == "Limited size of project"
 
 
 @patch("app.routers.projects.ProjectService.get_document")
 def test_get_document(mock_get, get_client, override_dependencies):
     mock_get.return_value = Document(
-        id=1, name="test.txt", size=10, doc_type="text/plain"
+        id=1, name="test.txt", size=10, doc_type="text/plain", s3_key="fake-key"
     )
 
     response = get_client.get("/projects/1/documents/1")
@@ -202,7 +196,9 @@ def test_get_document_not_found(mock_get, get_client, override_dependencies):
 @patch("app.routers.projects.ProjectService.get_documents")
 def test_get_documents(mock_get_all, get_client, override_dependencies):
     mock_get_all.return_value = [
-        Document(id=1, name="test.txt", size=10, doc_type="text/plain")
+        Document(
+            id=1, name="test.txt", size=10, doc_type="text/plain", s3_key="fake-key"
+        )
     ]
 
     response = get_client.get("/projects/1/documents")
@@ -214,7 +210,7 @@ def test_get_documents(mock_get_all, get_client, override_dependencies):
 @patch("app.routers.projects.ProjectService.update_document")
 def test_update_document(mock_update, get_client, override_dependencies):
     mock_update.return_value = Document(
-        id=1, name="test2.txt", size=10, doc_type="text/plain"
+        id=1, name="test2.txt", size=10, doc_type="text/plain", s3_key="fake-key"
     )
 
     response = get_client.put(
@@ -235,7 +231,7 @@ def test_update_document_limit_exceeded(mock_update, get_client, override_depend
         files={"file": ("test2.txt", b"content", "text/plain")},
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 413
 
 
 @patch("app.routers.projects.ProjectService.update_document")

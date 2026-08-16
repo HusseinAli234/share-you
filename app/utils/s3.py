@@ -1,3 +1,4 @@
+import os
 from io import BytesIO
 
 import boto3
@@ -13,7 +14,13 @@ if settings.DEBUG_MODE:
         endpoint_url="http://minio:9000",
     )
 else:
-    s3 = boto3.client("s3")
+    s3 = boto3.client(
+        "s3",
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+        region_name=settings.AWS_REGION_NAME,
+        aws_session_token=settings.AWS_SESSION_TOKEN,
+    )
 
 
 def init_bucket():
@@ -24,7 +31,9 @@ def init_bucket():
 
 
 def upload_file(file: BytesIO, filename: str, path: str):
+    filename = os.path.basename(filename)
     key = f"{path}/{filename}"
+
     s3.upload_fileobj(file, settings.S3_BUCKET_NAME, key)
     return key
 

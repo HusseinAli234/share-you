@@ -21,7 +21,8 @@ def register(form: RegisterForm, db: Session = Depends(get_db)):
     user = AuthService.register_user(db=db, form=form)
     if not user:
         raise HTTPException(
-            status_code=403, detail="User with this login already exist!"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User with this login already exist!",
         )
     return {"message": "Succesefully created!", "id": user.id}
 
@@ -37,7 +38,9 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
         db=db, username=form.username, password=form.password
     )
     if not token:
-        raise HTTPException(status_code=403, detail="Invalid sign in")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid sign in"
+        )
 
     return {"access_token": token, "message": "Successfully sign in"}
 
