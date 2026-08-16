@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 from fastapi import UploadFile
 
-from app.models import Document, Project, ProjectMember, Role, User
+from app.models import Document, Project, ProjectMember, User
 from app.schemas.projects import ProjectCreate, ProjectUpdate
 from app.services.project_service import ProjectService
 
