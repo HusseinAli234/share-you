@@ -23,7 +23,15 @@ def get_current_user(token: str = Depends(oauth_scheme), db: Session = Depends(g
     except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    user = db.query(User).filter(User.id == payload.get("sub")).first()
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(User).filter(User.id == user_id).first()
 
     if user is None:
         raise HTTPException(status_code=401, detail="User not exist")

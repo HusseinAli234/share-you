@@ -2,8 +2,6 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models.projects import Role
-
 
 class ProjectCreate(BaseModel):
     name: str
@@ -22,8 +20,3 @@ class ProjectOut(BaseModel):
     description: Optional[str] = None
     total_size: Optional[int] = None
     version: int
-
-
-class ProjectInvite(BaseModel):
-    user_id: int
-    role: Role = Role.PARTICIPANT

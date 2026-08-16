@@ -48,7 +48,7 @@ def test_register_already_exists(mock_register, get_client):
         },
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 409
     assert response.json()["detail"] == "User with this login already exist!"
 
 
@@ -76,7 +76,7 @@ def test_login_invalid(mock_authenticate, get_client):
         "/auth/login", data={"username": "testuser", "password": "wrongpassword"}
     )
 
-    assert response.status_code == 403
+    assert response.status_code == 401
     assert response.json()["detail"] == "Invalid sign in"
 
 

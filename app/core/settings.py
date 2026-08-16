@@ -10,11 +10,12 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     SECRET_KEY: str
 
-    EXPIRE_TIME: int = 5
+    EXPIRE_TIME: int = 60
 
     AWS_ACCESS_KEY_ID: str
     AWS_SECRET_ACCESS_KEY: str
     AWS_REGION_NAME: str
+    AWS_SESSION_TOKEN: str
     S3_BUCKET_NAME: str
     S3_EXTERNAL_URL: str
 
@@ -22,6 +23,7 @@ class Settings(BaseSettings):
     MINIO_ROOT_PASSWORD: str
 
     DEBUG_MODE: bool = True
+    LOG_LEVEL: str = "INFO"
 
     MAX_PROJECT_SIZE_BYTES: int = 50 * 1024 * 1024
 

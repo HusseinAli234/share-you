@@ -16,11 +16,11 @@ from app.models import User
 from app.schemas.documents import DocumentOut
 from app.schemas.projects import (
     ProjectCreate,
-    ProjectInvite,
     ProjectOut,
     ProjectUpdate,
 )
 from app.services.project_service import ProjectService
+from app.utils.s3 import get_url
 from app.utils.validators import (
     validate_file,
     validate_project_owner,
@@ -86,7 +86,7 @@ def get_project_by_id(
 def update_project(
     project_id: int,
     data: ProjectUpdate,
-    user: User = Depends(validate_project_owner),
+    user: User = Depends(validate_projects_member),
     db: Session = Depends(get_db),
 ):
     project = ProjectService.update_project(db=db, project_id=project_id, data=data)
@@ -115,7 +115,7 @@ def delete_project(
 
 
 @router.post(
-    "/{project_id}/invite/",
+    "/{project_id}/invite",
     response_model=str,
     status_code=status.HTTP_200_OK,
     summary="This endpoint for invite user to project",
@@ -123,19 +123,21 @@ def delete_project(
 )
 def send_invite(
     project_id: int,
-    project_inv: ProjectInvite,
-    user: User = Depends(validate_project_owner),
+    user: str,
+    current_user: User = Depends(validate_project_owner),
     db: Session = Depends(get_db),
 ):
     success, message = ProjectService.invite_user(
-        db=db, project_id=project_id, invite_data=project_inv
+        db=db, project_id=project_id, user_login=user
     )
 
     if not success:
         if message == "User not found":
             raise HTTPException(status_code=404, detail="Not found")
         elif message == "User is already a member":
-            raise HTTPException(status_code=400, detail="Bad request!")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT, detail="User is already a member"
+            )
 
     return message
 
@@ -156,7 +158,10 @@ def upload_file(
     try:
         return ProjectService.upload_document(db=db, project_id=project_id, file=file)
     except ValueError:
-        raise HTTPException(status_code=403, detail="Limited size of project")
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="Limited size of project",
+        )
 
 
 @router.get(
@@ -177,7 +182,11 @@ def get_document(
     )
     if not doc:
         raise HTTPException(status_code=404, detail="Not Found!")
-    return doc
+
+    doc_out = DocumentOut.model_validate(doc)
+
+    doc_out.download_url = get_url(doc.s3_key)
+    return doc_out
 
 
 @router.get(
@@ -189,10 +198,18 @@ def get_document(
 )
 def get_documents(
     project_id: int,
+    skip: int = 0,
+    limit: int = 10,
     user: User = Depends(validate_projects_member),
     db: Session = Depends(get_db),
 ):
-    return ProjectService.get_documents(db=db, project_id=project_id)
+    docs = ProjectService.get_documents(
+        db=db, project_id=project_id, limit=limit, skip=skip
+    )
+    docs_out = [DocumentOut.model_validate(doc) for doc in docs]
+    for doc_out, doc in zip(docs_out, docs):
+        doc_out.download_url = get_url(doc.s3_key)
+    return docs_out
 
 
 @router.put(
@@ -206,7 +223,7 @@ def update_document(
     project_id: int,
     document_id: int,
     background_tasks: BackgroundTasks,
-    user: User = Depends(validate_project_owner),
+    user: User = Depends(validate_projects_member),
     db: Session = Depends(get_db),
     file: UploadFile = Depends(validate_file),
 ):
@@ -219,7 +236,10 @@ def update_document(
             background_tasks=background_tasks,
         )
     except ValueError:
-        raise HTTPException(status_code=403, detail="Limited size of project")
+        raise HTTPException(
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+            detail="Limited size of project",
+        )
     if not document:
         raise HTTPException(status_code=404, detail="Not found")
     return document

@@ -16,6 +16,7 @@ class Document(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(nullable=False)
     size: Mapped[int] = mapped_column()
     s3_key: Mapped[str] = mapped_column(nullable=False)
+    # status: Mapped[str] = mapped_column(nullable=False,default="pending")
     doc_type: Mapped[str] = mapped_column()
 
     project_id: Mapped[int] = mapped_column(
