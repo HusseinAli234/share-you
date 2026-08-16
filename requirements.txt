@@ -32,8 +32,6 @@ python-dotenv
 PyJWT[crypto]>=2.13.0
 argon2-cffi>=23.1.0
 
-# Async DB
-asyncpg
 
 # Logger
 loguru
@@ -41,6 +39,7 @@ loguru
 # Testing
 pytest
 pytest-asyncio
+
 
 # Linter
 black

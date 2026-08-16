@@ -1,16 +1,20 @@
 from typing import List
 
+import jwt
 from fastapi import (
     APIRouter,
     BackgroundTasks,
     Depends,
     HTTPException,
+    Query,
     UploadFile,
     status,
 )
+from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
 
-from app.core.security import get_current_user
+from app.core.security import create_invite_token, get_current_user
+from app.core.settings import settings
 from app.db.session import get_db
 from app.models import User
 from app.schemas.documents import DocumentOut
@@ -59,6 +63,32 @@ def get_user_projects(
 
 
 @router.get(
+    "/join",
+    status_code=status.HTTP_200_OK,
+    summary="This endpoint for join to project by email(login)",
+    response_description="Successful joining",
+)
+def join_by_email(token: str, db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    project_id = payload.get("project_id")
+    email = payload.get("email")
+    if not project_id or not email:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    try:
+        project_id = int(project_id)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    success, msg = ProjectService.invite_user(db, project_id, email)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+
+    return {"msg": "Successful joining"}
+
+
+@router.get(
     "/{project_id}",
     response_model=ProjectOut,
     status_code=status.HTTP_200_OK,
@@ -74,6 +104,23 @@ def get_project_by_id(
     if not project:
         raise HTTPException(status_code=404, detail="Not found")
     return project
+
+
+@router.get(
+    "/{project_id}/share",
+    status_code=status.HTTP_200_OK,
+    summary="This endpoint for send invite by email",
+    response_description="Email was sent",
+)
+def send_email(
+    project_id: int,
+    email: str = Query(..., alias="with"),
+    user: User = Depends(validate_project_owner),
+    db: Session = Depends(get_db),
+):
+    token = create_invite_token(email, project_id)
+    link = f"projects/join?token={token}"
+    return {"url": link}
 
 
 @router.put(

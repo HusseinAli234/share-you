@@ -145,9 +145,15 @@ class ProjectService:
             s3_key=s3_key,
         )
         db.add(doc)
-        db.commit()
-        db.refresh(doc)
-        db.refresh(project)
+        try:
+            db.commit()
+            db.refresh(doc)
+            db.refresh(project)
+        except Exception as e:
+            db.rollback()
+            delete_file(s3_key)
+            logger.error(f"Failed to save document {file.filename} to database: {e}")
+            raise e
         logger.info(f"Document {doc.id} uploaded to project {project_id}")
         return doc
 
@@ -216,9 +222,16 @@ class ProjectService:
 
         project.total_size -= prev_size
         project.total_size += file.size
-        db.commit()
-        db.refresh(document)
-        db.refresh(project)
+
+        try:
+            db.commit()
+            db.refresh(document)
+            db.refresh(project)
+        except Exception as e:
+            db.rollback()
+            delete_file(s3_key)
+            logger.error(f"Failed to update document {document_id} in database: {e}")
+            raise e
         logger.info(f"Document {document_id} in project {project_id} updated")
         return document
 
