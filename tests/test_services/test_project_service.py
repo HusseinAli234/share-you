@@ -111,9 +111,7 @@ def test_invite_user(mock_db_session):
 
 def test_invite_user_not_found(mock_db_session):
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
-    success, msg = ProjectService.invite_user(
-        mock_db_session, 1, "notfound"
-    )
+    success, msg = ProjectService.invite_user(mock_db_session, 1, "notfound")
     assert success is False
     assert msg == "User not found"
 
@@ -127,9 +125,7 @@ def test_invite_user_already_member(mock_db_session):
         member,
     ]
 
-    success, msg = ProjectService.invite_user(
-        mock_db_session, 1, "test_user"
-    )
+    success, msg = ProjectService.invite_user(mock_db_session, 1, "test_user")
 
     assert success is False
     assert msg == "User is already a member"
