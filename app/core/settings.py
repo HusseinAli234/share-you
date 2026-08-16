@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str
 
     EXPIRE_TIME: int = 60
+    INVITE_EXPIRE_TIME: int = 5
 
     AWS_ACCESS_KEY_ID: str
     AWS_SECRET_ACCESS_KEY: str

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from argon2 import PasswordHasher
-from argon2.exceptions import VerifyMismatchError
+from argon2.exceptions import InvalidHashError, VerifyMismatchError
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
@@ -46,7 +46,7 @@ def hashed_password(raw_password: str) -> str:
 def verify(raw_password: str, hashed_password: str) -> bool:
     try:
         return ph.verify(hashed_password, raw_password)
-    except VerifyMismatchError:
+    except (VerifyMismatchError, InvalidHashError):
         return False
 
 
@@ -58,5 +58,13 @@ def create_access_token(user):
         "exp": expire,
     }
 
+    token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    return token
+
+
+def create_invite_token(email: str, project_id: int):
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.INVITE_EXPIRE_TIME)
+
+    payload = {"project_id": project_id, "email": email, "exp": expire}
     token = jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
     return token

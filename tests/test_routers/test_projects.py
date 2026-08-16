@@ -146,6 +146,43 @@ def test_send_invite_already_member(mock_invite, get_client, override_dependenci
     assert response.status_code == 409
 
 
+@patch("app.routers.projects.create_invite_token")
+def test_send_email(mock_create_token, get_client, override_dependencies):
+    mock_create_token.return_value = "fake-token"
+
+    response = get_client.get("/projects/1/share?with=testuser")
+
+    assert response.status_code == 200
+    assert response.json()["url"] == "projects/join?token=fake-token"
+
+
+@patch("app.routers.projects.ProjectService.invite_user")
+@patch("app.routers.projects.jwt.decode")
+def test_join_by_email_success(
+    mock_jwt_decode, mock_invite, get_client, override_dependencies
+):
+    mock_jwt_decode.return_value = {"project_id": 1, "email": "testuser"}
+    mock_invite.return_value = (True, "Successfully invited")
+
+    response = get_client.get("/projects/join?token=fake-token")
+
+    assert response.status_code == 200
+    assert response.json()["msg"] == "Successful joining"
+
+
+@patch("app.routers.projects.jwt.decode")
+def test_join_by_email_invalid_token(
+    mock_jwt_decode, get_client, override_dependencies
+):
+    from jwt.exceptions import InvalidTokenError
+
+    mock_jwt_decode.side_effect = InvalidTokenError
+
+    response = get_client.get("/projects/join?token=invalid-token")
+
+    assert response.status_code == 401
+
+
 @patch("app.routers.projects.ProjectService.upload_document")
 def test_upload_file(mock_upload, get_client, override_dependencies):
     mock_upload.return_value = Document(
