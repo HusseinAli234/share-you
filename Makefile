@@ -2,16 +2,16 @@
 
 # Docker commands
 up:
-	docker compose up -d
+	sudo docker compose up -d
 
 down:
-	docker compose down
+	sudo docker compose down
 
 build:
-	docker compose up -d --build
+	sudo docker compose up -d --build
 
 logs:
-	docker compose logs -f
+	sudo docker compose logs -f
 
 # Testing and Code Quality
 test:
