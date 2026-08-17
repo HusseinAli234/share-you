@@ -122,7 +122,7 @@ class ProjectService:
 
     @staticmethod
     def upload_document(db: Session, project_id: int, file: UploadFile) -> Document:
-        project = db.query(Project).filter(Project.id == project_id).first()
+        project = db.query(Project).filter(Project.id == project_id).with_for_update().first()
 
         if project.total_size + file.size > settings.MAX_PROJECT_SIZE_BYTES:
             logger.warning(f"Upload failed: project {project_id} size limit exceeded")
@@ -198,7 +198,7 @@ class ProjectService:
         )
         if not document:
             return None
-        project = db.query(Project).filter(Project.id == project_id).first()
+        project = db.query(Project).filter(Project.id == project_id).with_for_update().first()
 
         prev_size = document.size
 
@@ -249,7 +249,7 @@ class ProjectService:
         )
         if not document:
             return False
-        project = db.query(Project).filter(Project.id == project_id).first()
+        project = db.query(Project).filter(Project.id == project_id).with_for_update().first()
 
         project.total_size -= document.size
         background_tasks.add_task(ProjectService.__batch_delete, [document.s3_key])
