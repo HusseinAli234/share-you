@@ -38,7 +38,6 @@ jobs:
 
       - name: Run tests with pytest
         env:
-          POSTGRES_USER: postgres
           POSTGRES_PASSWORD: admin
           POSTGRES_DB: share_me
           POSTGRES_HOST: localhost
