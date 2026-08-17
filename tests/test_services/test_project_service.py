@@ -138,7 +138,9 @@ def test_upload_document(mock_uuid, mock_s3_upload, mock_db_session):
     mock_s3_upload.return_value = "fake-s3-key"
 
     project = Project(id=1, total_size=0)
-    mock_db_session.query.return_value.filter.return_value.with_for_update.return_value.first.return_value = project
+    mock_db_session.query.return_value.filter.return_value.with_for_update.return_value.first.return_value = (
+        project
+    )
 
     fake_file = MagicMock(spec=UploadFile)
     fake_file.size = 100
@@ -190,7 +192,9 @@ def test_update_document(mock_uuid, mock_s3_upload, mock_db_session):
     doc = Document(id=1, size=50, s3_key="old-key")
     project = Project(id=1, total_size=50)
     mock_db_session.query.return_value.filter.return_value.first.return_value = doc
-    mock_db_session.query.return_value.filter.return_value.with_for_update.return_value.first.return_value = project
+    mock_db_session.query.return_value.filter.return_value.with_for_update.return_value.first.return_value = (
+        project
+    )
 
     fake_file = MagicMock(spec=UploadFile)
     fake_file.size = 100
@@ -215,7 +219,9 @@ def test_delete_document(mock_db_session):
     doc = Document(id=1, size=50, s3_key="old-key")
     project = Project(id=1, total_size=50)
     mock_db_session.query.return_value.filter.return_value.first.return_value = doc
-    mock_db_session.query.return_value.filter.return_value.with_for_update.return_value.first.return_value = project
+    mock_db_session.query.return_value.filter.return_value.with_for_update.return_value.first.return_value = (
+        project
+    )
 
     mock_bg_tasks = MagicMock()
 
